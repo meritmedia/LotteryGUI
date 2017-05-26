@@ -16,6 +16,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Data.SqlClient;
 using System.Diagnostics;
+using System.Text.RegularExpressions;
 
 
 namespace LotteryGUI
@@ -80,14 +81,12 @@ namespace LotteryGUI
             System.TimeSpan duration = new System.TimeSpan(2, 0, 0, 0);
             System.DateTime expires = winningDateTime.Add(duration);
             SqlConnection connectionStr = new SqlConnection(meritmedia);
-            SqlCommand command = new SqlCommand("select top 1 from slb_bands", connectionStr);
-            command.Connection.Open();
-            string queryStr = "insert into slb_winningTickets(ticketID, match, prize, expires) " +
-                "values ('" + ticketID + "','" + match + "','" + prize + "','" + expires + "');";
+            string queryStr = "exec slbWinningTicketInsert_p '" + ticketID + "','" + match + "','" + prize + "','" + expires + "'";
 
             SqlCommand query = new SqlCommand(queryStr, connectionStr);
+            query.Connection.Open();
             query.ExecuteNonQuery();
-            command.Connection.Close();
+            query.Connection.Close();
             WriteIt(ticketID);
         }
         public frmLotto()
@@ -310,6 +309,10 @@ namespace LotteryGUI
                         case winType.NOWIN:
 
                             --chances;
+                            if (chances < 1 )
+                            {
+                                chances = 0;
+                            }
                             btnTryAgainKeepNumbers.Text = winText[0, 0] + 
                                 Environment.NewLine + chances + " chances left";
 
@@ -466,32 +469,76 @@ namespace LotteryGUI
 
         private void txtGuess1_TextChanged(object sender, EventArgs e)
         {
-            ZeroTest(txtGuess1.Text);
-            txtGuess1.Focus();
+            var good = ZeroTest(txtGuess1.Text);
+            if (good == 0)
+            {
+                txtGuess1.Text = "";
+                txtGuess1.Focus();
+            }
+            else
+            {
+                txtGuess2.Focus();
+            }
+            
         }
 
         private void txtGuess2_TextChanged(object sender, EventArgs e)
         {
-            ZeroTest(txtGuess2.Text);
-            txtGuess2.Focus();
-        }
-
-        private void ZeroTest(string zero)
-        {
-            if (zero == "0") {
-                lblErrorMsg.Text = "Your number must be between 1 and 9!";
+            var good = ZeroTest(txtGuess2.Text);
+            if (good == 0)
+            {
+                txtGuess2.Text = "";
+                txtGuess2.Focus();
             }
             else
             {
-                lblErrorMsg.Text = "";
+                txtGuess3.Focus();
             }
         }
 
         private void txtGuess3_TextChanged(object sender, EventArgs e)
         {
-            ZeroTest(txtGuess3.Text);
-            txtGuess3.Focus();
+            var good = ZeroTest(txtGuess3.Text);
+            if (good == 0)
+            {
+                txtGuess3.Text = "";
+                txtGuess3.Focus();
+            }
+            else
+            {
+                btnReveal.Focus();
+            }
         }
+
+        private int ZeroTest(string zero)
+        {
+            Regex regex = new Regex("[1-9]");
+            var good = 0;
+            if (regex.IsMatch(zero))
+            {
+                lblErrorMsg.Text = "";
+                good = 1;
+            }
+            else
+            {
+                lblErrorMsg.Text = "Your number must be between 1 and 9!";
+                good = 0;
+            }
+            return good;
+            //if (zero == "0") {
+            //    lblErrorMsg.Text = "Your number must be between 1 and 9!";
+            //}
+            //else
+            //{
+            //    lblErrorMsg.Text = "";
+            //}
+        }
+
+        //private void txtGuess3_TextChanged(object sender, EventArgs e)
+        //{
+        //    ZeroTest(txtGuess3.Text);
+        //    txtGuess3.Focus();
+        //}
 
         private void btnClaimTicket_Leave(object sender, EventArgs e)
         {
